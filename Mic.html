@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Happy Birthday Mehdi 🎂</title>
+<style>
+:root{
+  --bg:#3e2a1a;
+  --accent:#c98b5a;
+  --accent-neon:#ffb86c;
+  --cream:#2a1f12;
+}
+body{
+  background:var(--bg);
+  color:white;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  font-family:'Poppins',sans-serif;
+  padding:2rem;
+  position:relative;
+  overflow:hidden;
+}
+h1#helloText{
+  font-family:"Pacifico", cursive;
+  font-size:2.8rem;
+  color:var(--accent);
+  transition:opacity .5s;
+}
+.cake-wrap{
+  height:260px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  margin-top:2rem;
+  position:relative;
+}
+.cake{width:260px;height:220px;opacity:0;transform:translateY(20px) scale(.95);transition:all .6s ease;position:relative;}
+.cake.show{opacity:1;transform:translateY(0) scale(1);}
+.layer{width:100%;border-radius:14px;}
+.sponge{height:70px;background:#c07a4a;}
+.cream{height:60px;background:#3a3a3a;margin-top:-10px;}
+.top-plate{height:35px;background:#5c3b26;margin-top:-10px;border-radius:12px 12px 10px 10px;}
+.candle{position:absolute;left:50%;top:-12px;transform:translateX(-50%);width:18px;height:70px;border-radius:6px;background:#fff3;cursor:pointer;}
+.flame{width:20px;height:30px;opacity:0;position:absolute;top:-22px;left:50%;transform:translateX(-50%);transition:.2s;}
+.flame.show{opacity:1;}
+.wish{
+  position:absolute;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:1.8rem;
+  font-weight:800;
+  color:var(--accent-neon); 
+  text-shadow: 0 0 6px var(--accent-neon), 0 0 12px var(--accent-neon);
+  display:none;
+  text-align:center;
+  z-index:10;
+}
+.wish.show{display:block;}
+#start{
+  width:230px;
+  font-weight:700;
+  border-radius:999px;
+  background:var(--accent-neon);
+  border:none;
+  color:#000;
+  box-shadow:0 0 12px var(--accent-neon),0 0 22px var(--accent-neon);
+  margin-top:3rem;
+  cursor:pointer;
+}
+#confetti, #fireworks{position:absolute;inset:0;pointer-events:none;}
+.balloon{position:absolute;width:64px;height:90px;border-radius:50% 50% 45% 45%;display:flex;align-items:flex-end;justify-content:center;}
+.balloon:after{content:'';width:2px;height:50px;background:#333;opacity:.1;position:absolute;bottom:-45px;}
+</style>
+</head>
+<body>
+<h1 id="helloText">Hey click below for the yummy cake</h1>
+<div class="cake-wrap">
+  <div id="cake" class="cake">
+    <div class="layer sponge" id="sponge"></div>
+    <div class="layer cream" id="cream"></div>
+    <div class="layer top-plate" id="plate"></div>
+    <div class="candle" id="candle">
+      <div class="flame" id="flame">
+        <div class="inner" style="width:12px;height:20px;background:orange;border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<button id="start">click me <3 </button>
+<div class="wish" id="wishText">Happy Birthday Mehdi ^_^</div>
+<canvas id="confetti"></canvas>
+<canvas id="fireworks"></canvas>
+<div id="balloons"></div>
+
+<script>
+const cake=document.getElementById('cake');
+const sponge=document.getElementById('sponge');
+const cream=document.getElementById('cream');
+const plate=document.getElementById('plate');
+const flame=document.getElementById('flame');
+const wishText=document.getElementById('wishText');
+const btn=document.getElementById('start');
+const candle=document.getElementById('candle');
+const confettiCanvas=document.getElementById('confetti');
+const fireworksCanvas=document.getElementById('fireworks');
+const balloonsDiv=document.getElementById('balloons');
+const helloText=document.getElementById('helloText');
+let blown=false;
+
+btn.addEventListener('click', async ()=>{
+  btn.disabled=true;
+  cake.classList.add('show');
+  sponge.style.transform='translateY(0)';
+  cream.style.transform='translateY(-6px)';
+  plate.style.transform='translateY(-8px)';
+  flame.classList.add('show');
+  btn.innerText='Tap to blow the candle';
+
+  try{ await initMic(); } catch(e){ console.log('mic not available'); }
+});
+
+candle.addEventListener('click',blow);
+
+function blow(){
+  if(blown) return;
+  blown=true;
+  flame.classList.remove('show');
+  wishText.classList.add('show');
+  helloText.style.opacity='0';
+  btn.innerText='✨ have a great one ✨';
+  startConfetti();
+  launchBalloons();
+  launchFireworks();
+}
+
+// MIC puff detection
+let audioCtx, analyser, dataArray, mediaStream;
+async function initMic(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error('No mic');
+  mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  const source=audioCtx.createMediaStreamSource(mediaStream);
+  analyser=audioCtx.createAnalyser(); analyser.fftSize=512;
+  source.connect(analyser);
+  dataArray=new Uint8Array(analyser.frequencyBinCount);
+  listenMic();
+}
+
+function listenMic(){
+  const threshold=50; // sensitive puff
+  function tick(){
+    analyser.getByteFrequencyData(dataArray);
+    let sum=0;for(let i=0;i<dataArray.length;i++) sum+=dataArray[i];
+    const avg=sum/dataArray.length;
+    if(avg>threshold) blow();
+    if(!blown) requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// Confetti
+const ctx=confettiCanvas.getContext('2d');
+let confetti=[];
+function resize(){confettiCanvas.width=confettiCanvas.clientWidth;confettiCanvas.height=confettiCanvas.clientHeight; fireworksCanvas.width=fireworksCanvas.clientWidth; fireworksCanvas.height=fireworksCanvas.clientHeight;}
+window.addEventListener('resize',resize); resize();
+function startConfetti(){
+  for(let i=0;i<150;i++){confetti.push({x:rand(0,confettiCanvas.width),y:rand(0,confettiCanvas.height/3),w:rand(6,12),h:rand(8,20),rot:rand(0,360),speedY:rand(1,4),speedX:rand(-1.5,1.5),spin:rand(-4,4),color:pick(['#ff8ba7','#ffd36a','#c98b5a','#c9f7ff','#b2f7c4'])})} renderConfetti(); setTimeout(()=>{confetti=[];},12000);
+}
+function renderConfetti(){
+  ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+  for(let p of confetti){p.x+=p.speedX; p.y+=p.speedY; p.rot+=p.spin; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180); ctx.fillStyle=p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();}
+  confetti=confetti.filter(p=>p.y<confettiCanvas.height+50); if(confetti.length>0) requestAnimationFrame(renderConfetti);
+}
+
+// Balloons
+function launchBalloons(){
+  let delay = 0;
+  for(let i=0;i<7;i++){
+    setTimeout(()=>{
+      const b = document.createElement('div');
+      b.className = 'balloon';
+      b.style.left = rand(10,80) + '%';
+      b.style.top = '-100px';
+      const hue = Math.floor(rand(0,360));
+      b.style.background = `linear-gradient(180deg,hsl(${hue} 90% 75%),hsl(${hue} 80% 55%))`;
+      balloonsDiv.appendChild(b);
+      animateFallingBalloon(b);
+    }, delay);
+    delay += 600;
+  }
+  setTimeout(()=>{ balloonsDiv.innerHTML=''; }, 12000);
+}
+function animateFallingBalloon(el){
+  const duration = rand(7000,9000);
+  const endTop = window.innerHeight + 50;
+  el.animate([{transform:'translateY(0)',opacity:1},{transform:`translateY(${endTop}px)`,opacity:0}],{duration:duration,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'});
+}
+
+// Fireworks
+const fCtx = fireworksCanvas.getContext('2d');
+let fireworksParticles = [];
+function launchFireworks(){
+  for(let i=0;i<10;i++){
+    setTimeout(()=>{ createFirework(rand(50,window.innerWidth-50), rand(50,150)); }, i*200);
+  }
+  setTimeout(()=>{ fireworksParticles = []; fCtx.clearRect(0,0,fireworksCanvas.width,fireworksCanvas.height); }, 5000);
+}
+function createFirework(x,y){
+  for(let i=0;i<30;i++){
+    fireworksParticles.push({x,y,dx:rand(-4,4),dy:rand(-4,4),radius:rand(2,4),color:pick(['#ff0','#f0f','#0ff','#ff8','#fff'])});
+  }
+  renderFireworks();
+}
+function renderFireworks(){
+  fCtx.clearRect(0,0,fireworksCanvas.width,fireworksCanvas.height);
+  for(let p of fireworksParticles){p.x+=p.dx*2; p.y+=p.dy*2; p.radius*=0.96; fCtx.beginPath(); fCtx.arc(p.x,p.y,p.radius,0,Math.PI*2); fCtx.fillStyle=p.color; fCtx.fill();}
+  fireworksParticles = fireworksParticles.filter(p=>p.radius>0.5);
+  if(fireworksParticles.length>0) requestAnimationFrame(renderFireworks);
+}
+
+// utils
+function rand(a,b){ return Math.random()*(b-a)+a; }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+</script>
+</body>
+</html>
